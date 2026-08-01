@@ -7,5 +7,7 @@
     "apps/*",
     "packages/*"
   ],
-  "scripts": {}
+  "scripts": {
+    "start": "echo \"No app entrypoint yet\""
+  }
 }
