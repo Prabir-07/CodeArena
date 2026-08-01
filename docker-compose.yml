@@ -1,0 +1,66 @@
+services:
+  postgres-users:
+    image: postgres:16
+    container_name: codearena-postgres-users
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_USERS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_USERS_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_users_data:/var/lib/postgresql/data
+    networks:
+      - codearena-network
+
+  postgres-problems:
+    image: postgres:16
+    container_name: codearena-postgres-problems
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_PROBLEMS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PROBLEMS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_PROBLEMS_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_problems_data:/var/lib/postgresql/data
+    networks:
+      - codearena-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: codearena-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - codearena-network
+
+  redis:
+    image: redis:7
+    container_name: codearena-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - codearena-network
+
+volumes:
+  postgres_users_data:
+  postgres_problems_data:
+  rabbitmq_data:
+  redis_data:
+
+networks:
+  codearena-network:
+    driver: bridge
