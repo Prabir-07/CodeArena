@@ -1,0 +1,11 @@
+{
+  "name": "codearena",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Microservices-based Online Judge Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {}
+}
