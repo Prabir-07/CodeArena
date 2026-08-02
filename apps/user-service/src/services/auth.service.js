@@ -1,20 +1,23 @@
-const crypto = require('crypto');
-
 const prisma = require('../config/prisma');
 const config = require('../config/env');
 const { hashPassword, comparePassword } = require('../auth/password');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../auth/jwt');
 const { durationToMs } = require('../auth/cookies');
-const { hashToken } = require('../auth/token');
+const { generateToken, hashToken } = require('../auth/token');
 const userRepository = require('../repositories/user.repository');
 const sessionRepository = require('../repositories/session.repository');
 const verificationTokenRepository = require('../repositories/verificationToken.repository');
+const passwordResetTokenRepository = require('../repositories/passwordResetToken.repository');
+const emailService = require('../emails/email.service');
 const ApiError = require('../utils/ApiError');
 const sanitizeUser = require('../utils/sanitizeUser');
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password';
 const INVALID_REFRESH_TOKEN_MESSAGE = 'Invalid or expired refresh token';
+const INVALID_VERIFICATION_TOKEN_MESSAGE = 'Invalid or expired verification token';
+const INVALID_RESET_TOKEN_MESSAGE = 'Invalid or expired reset token';
 // Precomputed bcrypt hash with no matching plaintext, used to keep login's
 // response time uniform whether or not the email exists (avoids user enumeration).
 const DUMMY_PASSWORD_HASH = '$2b$12$x5mHxQ.Ur3LpLl8uUyz0veYrPxfEV3OkVu6uowgc2Nt6Hf/O5MZQ.';
@@ -51,9 +54,10 @@ async function register({ username, email, password, firstName, lastName }, meta
   let user;
   let accessToken;
   let refreshToken;
+  let verificationToken;
 
   try {
-    ({ user, accessToken, refreshToken } = await prisma.$transaction(async (tx) => {
+    ({ user, accessToken, refreshToken, verificationToken } = await prisma.$transaction(async (tx) => {
       const createdUser = await userRepository.createUser(
         {
           username,
@@ -65,10 +69,14 @@ async function register({ username, email, password, firstName, lastName }, meta
         tx
       );
 
+      // Raw token is kept in memory only long enough to hash it for storage and to
+      // hand back to the caller — the future email service needs this exact value
+      // to send the verification link, so it shouldn't have to be re-derived.
+      const rawVerificationToken = generateToken();
       await verificationTokenRepository.createVerificationToken(
         {
           userId: createdUser.id,
-          token: crypto.randomBytes(32).toString('hex'),
+          tokenHash: hashToken(rawVerificationToken),
           expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
         },
         tx
@@ -94,7 +102,12 @@ async function register({ username, email, password, firstName, lastName }, meta
         tx
       );
 
-      return { user: createdUser, accessToken: newAccessToken, refreshToken: newRefreshToken };
+      return {
+        user: createdUser,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        verificationToken: rawVerificationToken,
+      };
     }));
   } catch (err) {
     if (err.code === 'P2002') {
@@ -109,6 +122,9 @@ async function register({ username, email, password, firstName, lastName }, meta
     user: sanitizeUser(user),
     accessToken,
     refreshToken,
+    // Not part of the HTTP response — reserved for the future email service
+    // to send the verification link without re-generating/re-hashing a token.
+    verificationToken,
   };
 }
 
@@ -195,10 +211,115 @@ async function logoutAll(userId) {
   await sessionRepository.deleteAllByUserId(userId);
 }
 
+async function verifyEmail(rawToken) {
+  const tokenHash = hashToken(rawToken);
+  const record = await verificationTokenRepository.findByHash(tokenHash);
+
+  if (!record) {
+    throw new ApiError(400, INVALID_VERIFICATION_TOKEN_MESSAGE);
+  }
+
+  if (record.expiresAt < new Date()) {
+    await verificationTokenRepository.deleteById(record.id);
+    throw new ApiError(400, INVALID_VERIFICATION_TOKEN_MESSAGE);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await userRepository.updateUser(record.userId, { isEmailVerified: true }, tx);
+    await verificationTokenRepository.deleteById(record.id, tx);
+  });
+}
+
+async function resendVerification(userId) {
+  const user = await userRepository.findById(userId);
+
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  if (user.isEmailVerified) {
+    throw new ApiError(409, 'Email is already verified');
+  }
+
+  const rawVerificationToken = generateToken();
+
+  await prisma.$transaction(async (tx) => {
+    await verificationTokenRepository.deleteAllByUserId(userId, tx);
+    await verificationTokenRepository.createVerificationToken(
+      {
+        userId,
+        tokenHash: hashToken(rawVerificationToken),
+        expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+      },
+      tx
+    );
+  });
+
+  await emailService.sendVerificationEmail({
+    to: user.email,
+    firstName: user.firstName,
+    token: rawVerificationToken,
+  });
+}
+
+async function forgotPassword(email) {
+  const user = await userRepository.findByEmail(email);
+
+  if (!user) {
+    return;
+  }
+
+  const rawResetToken = generateToken();
+
+  await prisma.$transaction(async (tx) => {
+    await passwordResetTokenRepository.deleteAllByUserId(user.id, tx);
+    await passwordResetTokenRepository.createPasswordResetToken(
+      {
+        userId: user.id,
+        tokenHash: hashToken(rawResetToken),
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
+      },
+      tx
+    );
+  });
+
+  await emailService.sendPasswordResetEmail({
+    to: user.email,
+    firstName: user.firstName,
+    token: rawResetToken,
+  });
+}
+
+async function resetPassword(rawToken, newPassword) {
+  const tokenHash = hashToken(rawToken);
+  const record = await passwordResetTokenRepository.findByHash(tokenHash);
+
+  if (!record) {
+    throw new ApiError(400, INVALID_RESET_TOKEN_MESSAGE);
+  }
+
+  if (record.expiresAt < new Date()) {
+    await passwordResetTokenRepository.deleteById(record.id);
+    throw new ApiError(400, INVALID_RESET_TOKEN_MESSAGE);
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+
+  await prisma.$transaction(async (tx) => {
+    await userRepository.updateUser(record.userId, { passwordHash }, tx);
+    await sessionRepository.deleteAllByUserId(record.userId, tx);
+    await passwordResetTokenRepository.deleteById(record.id, tx);
+  });
+}
+
 module.exports = {
   register,
   login,
   refreshSession,
   logout,
   logoutAll,
+  verifyEmail,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
 };

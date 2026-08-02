@@ -10,9 +10,17 @@ function requestMeta(req) {
 
 async function register(req, res, next) {
   try {
-    const { user, accessToken, refreshToken } = await authService.register(req.body, requestMeta(req));
+    const { user, accessToken, refreshToken, verificationToken } = await authService.register(
+      req.body,
+      requestMeta(req)
+    );
 
     setAuthCookies(res, { accessToken, refreshToken });
+
+    // verificationToken is available here for the future email service
+    // (e.g. emailService.sendVerificationEmail(user, verificationToken)).
+    // Not sent to the client and not part of the response.
+    void verificationToken;
 
     res.status(201).json({
       success: true,
@@ -92,10 +100,66 @@ async function logoutAll(req, res, next) {
   }
 }
 
+async function verifyEmail(req, res, next) {
+  try {
+    await authService.verifyEmail(req.body.token);
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resendVerification(req, res, next) {
+  try {
+    await authService.resendVerification(req.user.sub);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function forgotPassword(req, res, next) {
+  try {
+    await authService.forgotPassword(req.body.email);
+
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    await authService.resetPassword(req.body.token, req.body.newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   register,
   login,
   refresh,
   logout,
   logoutAll,
+  verifyEmail,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
 };

@@ -59,7 +59,7 @@ model Session {
 model VerificationToken {
   id        String   @id @default(uuid())
   userId    String
-  token     String
+  tokenHash String
   expiresAt DateTime
   createdAt DateTime @default(now())
 
@@ -72,7 +72,7 @@ model VerificationToken {
 model PasswordResetToken {
   id        String   @id @default(uuid())
   userId    String
-  token     String
+  tokenHash String
   expiresAt DateTime
   createdAt DateTime @default(now())
 
