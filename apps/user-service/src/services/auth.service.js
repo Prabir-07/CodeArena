@@ -312,6 +312,107 @@ async function resetPassword(rawToken, newPassword) {
   });
 }
 
+function issueTokens(user) {
+  const accessToken = generateAccessToken({ sub: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ sub: user.id, role: user.role });
+  return { accessToken, refreshToken };
+}
+
+async function persistSession(userId, refreshToken, meta, client) {
+  await sessionRepository.createSession(
+    {
+      userId,
+      refreshTokenHash: hashToken(refreshToken),
+      expiresAt: refreshExpiryDate(),
+      ...buildSessionMeta(meta),
+    },
+    client
+  );
+}
+
+function sanitizeUsernameBase(input) {
+  const cleaned = (input || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
+  return cleaned.length >= 3 ? cleaned : `user${cleaned}`;
+}
+
+// Derives a username from an email/name hint, retrying with a random suffix on
+// collision. Bounded attempts + a fully-random fallback guarantee this always
+// terminates with something unique, without ever touching request validation.
+async function generateUniqueUsername(hint, client) {
+  const base = sanitizeUsernameBase(hint);
+  let candidate = base;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await userRepository.findByUsername(candidate, client);
+    if (!existing) {
+      return candidate;
+    }
+    candidate = `${base}_${generateToken(3)}`.slice(0, 30);
+  }
+
+  return `user_${generateToken(8)}`.slice(0, 30);
+}
+
+async function loginWithGoogle(profile, meta = {}) {
+  const { email, firstName, lastName, avatar } = profile;
+
+  if (!email) {
+    throw new ApiError(400, 'Google account did not provide an email address');
+  }
+
+  const existingUser = await userRepository.findByEmail(email);
+
+  if (existingUser) {
+    const { accessToken, refreshToken } = issueTokens(existingUser);
+    await persistSession(existingUser.id, refreshToken, meta);
+    return { user: sanitizeUser(existingUser), accessToken, refreshToken };
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const username = await generateUniqueUsername(email.split('@')[0], tx);
+      const createdUser = await userRepository.createUser(
+        {
+          username,
+          email,
+          passwordHash: null,
+          firstName,
+          lastName,
+          avatar,
+          isEmailVerified: true,
+        },
+        tx
+      );
+
+      const tokens = issueTokens(createdUser);
+      await persistSession(createdUser.id, tokens.refreshToken, meta, tx);
+
+      return { user: createdUser, ...tokens };
+    });
+
+    return {
+      user: sanitizeUser(result.user),
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    };
+  } catch (err) {
+    if (err.code !== 'P2002') {
+      throw err;
+    }
+
+    // Lost a race against a concurrent signup for the same email — fall back to a normal login.
+    const racedUser = await userRepository.findByEmail(email);
+    if (!racedUser) {
+      throw err;
+    }
+
+    const { accessToken, refreshToken } = issueTokens(racedUser);
+    await persistSession(racedUser.id, refreshToken, meta);
+    return { user: sanitizeUser(racedUser), accessToken, refreshToken };
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -322,4 +423,5 @@ module.exports = {
   resendVerification,
   forgotPassword,
   resetPassword,
+  loginWithGoogle,
 };

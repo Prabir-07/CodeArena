@@ -1,5 +1,6 @@
 const authService = require('../services/auth.service');
 const { setAuthCookies, clearAuthCookies, REFRESH_TOKEN_COOKIE } = require('../auth/cookies');
+const config = require('../config/env');
 
 function requestMeta(req) {
   return {
@@ -152,6 +153,20 @@ async function resetPassword(req, res, next) {
   }
 }
 
+async function googleCallback(req, res, next) {
+  try {
+    // req.user was set by passport's Google strategy verify callback (src/config/passport.js)
+    // to a normalized { email, firstName, lastName, avatar } profile — not yet a DB user.
+    const { accessToken, refreshToken } = await authService.loginWithGoogle(req.user, requestMeta(req));
+
+    setAuthCookies(res, { accessToken, refreshToken });
+
+    res.redirect(`${config.frontendUrl}?auth=success`);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -162,4 +177,5 @@ module.exports = {
   resendVerification,
   forgotPassword,
   resetPassword,
+  googleCallback,
 };
