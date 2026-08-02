@@ -53,4 +53,5 @@ module.exports = {
   REFRESH_TOKEN_COOKIE,
   setAuthCookies,
   clearAuthCookies,
+  durationToMs,
 };
