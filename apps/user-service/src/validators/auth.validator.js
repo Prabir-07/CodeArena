@@ -20,6 +20,12 @@ const registerSchema = z.object({
   lastName: z.string().trim().min(1, 'Last name is required').max(50),
 });
 
+const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required').max(72, 'Password must be at most 72 characters'),
+});
+
 module.exports = {
   registerSchema,
+  loginSchema,
 };
