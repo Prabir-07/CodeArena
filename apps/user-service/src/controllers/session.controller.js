@@ -1,5 +1,5 @@
 const sessionService = require('../services/session.service');
-const { clearAuthCookies, REFRESH_TOKEN_COOKIE } = require('../auth/cookies');
+const { clearAuthCookies, getRefreshTokenCookie } = require('../auth/cookies');
 
 async function getSessions(req, res, next) {
   try {
@@ -16,7 +16,7 @@ async function getSessions(req, res, next) {
 
 async function deleteSession(req, res, next) {
   try {
-    const incomingRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const incomingRefreshToken = getRefreshTokenCookie(req);
 
     const { isCurrent } = await sessionService.deleteSession(req.user.sub, req.params.id, incomingRefreshToken);
 
@@ -35,7 +35,7 @@ async function deleteSession(req, res, next) {
 
 async function deleteAllOtherSessions(req, res, next) {
   try {
-    const incomingRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const incomingRefreshToken = getRefreshTokenCookie(req);
 
     await sessionService.deleteAllOtherSessions(req.user.sub, incomingRefreshToken);
 

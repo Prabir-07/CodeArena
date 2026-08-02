@@ -1,8 +1,7 @@
+const ApiError = require('../utils/ApiError');
+
 const notFound = (req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
+  next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
 };
 
 module.exports = notFound;

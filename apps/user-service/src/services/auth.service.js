@@ -35,6 +35,34 @@ function refreshExpiryDate() {
   return new Date(Date.now() + durationToMs(config.jwt.refreshExpiresIn, 7 * 24 * 60 * 60 * 1000));
 }
 
+function issueTokens(id, role) {
+  const accessToken = generateAccessToken({ sub: id, role });
+  const refreshToken = generateRefreshToken({ sub: id, role });
+  return { accessToken, refreshToken };
+}
+
+async function persistSession(userId, refreshToken, meta, client) {
+  await sessionRepository.createSession(
+    {
+      userId,
+      refreshTokenHash: hashToken(refreshToken),
+      expiresAt: refreshExpiryDate(),
+      ...buildSessionMeta(meta),
+    },
+    client
+  );
+}
+
+// Shared by every "token from a request body/cookie" lookup (refresh session,
+// email verification, password reset): once the record is found, reject it if
+// it's past expiry, cleaning up the stale row on the way out.
+async function assertNotExpired(record, deleteFn, statusCode, message) {
+  if (record.expiresAt < new Date()) {
+    await deleteFn(record.id);
+    throw new ApiError(statusCode, message);
+  }
+}
+
 async function register({ username, email, password, firstName, lastName }, meta = {}) {
   const [existingEmail, existingUsername] = await Promise.all([
     userRepository.findByEmail(email),
@@ -82,30 +110,13 @@ async function register({ username, email, password, firstName, lastName }, meta
         tx
       );
 
-      const newAccessToken = generateAccessToken({ sub: createdUser.id, role: createdUser.role });
-      const newRefreshToken = generateRefreshToken({ sub: createdUser.id, role: createdUser.role });
-      const refreshTokenHash = hashToken(newRefreshToken);
-      const refreshExpiresAt = new Date(
-        Date.now() + durationToMs(config.jwt.refreshExpiresIn, 7 * 24 * 60 * 60 * 1000)
-      );
-
-      await sessionRepository.createSession(
-        {
-          userId: createdUser.id,
-          refreshTokenHash,
-          deviceName: meta.deviceName || null,
-          browser: meta.browser || null,
-          ipAddress: meta.ipAddress || null,
-          userAgent: meta.userAgent || null,
-          expiresAt: refreshExpiresAt,
-        },
-        tx
-      );
+      const tokens = issueTokens(createdUser.id, createdUser.role);
+      await persistSession(createdUser.id, tokens.refreshToken, meta, tx);
 
       return {
         user: createdUser,
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         verificationToken: rawVerificationToken,
       };
     }));
@@ -136,16 +147,8 @@ async function login({ email, password }, meta = {}) {
     throw new ApiError(401, INVALID_CREDENTIALS_MESSAGE);
   }
 
-  const accessToken = generateAccessToken({ sub: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ sub: user.id, role: user.role });
-  const refreshTokenHash = hashToken(refreshToken);
-
-  await sessionRepository.createSession({
-    userId: user.id,
-    refreshTokenHash,
-    expiresAt: refreshExpiryDate(),
-    ...buildSessionMeta(meta),
-  });
+  const { accessToken, refreshToken } = issueTokens(user.id, user.role);
+  await persistSession(user.id, refreshToken, meta);
 
   return {
     user: sanitizeUser(user),
@@ -173,17 +176,12 @@ async function refreshSession(incomingRefreshToken, meta = {}) {
     throw new ApiError(401, INVALID_REFRESH_TOKEN_MESSAGE);
   }
 
-  if (matchedSession.expiresAt < new Date()) {
-    await sessionRepository.deleteById(matchedSession.id);
-    throw new ApiError(401, INVALID_REFRESH_TOKEN_MESSAGE);
-  }
+  await assertNotExpired(matchedSession, sessionRepository.deleteById, 401, INVALID_REFRESH_TOKEN_MESSAGE);
 
-  const newAccessToken = generateAccessToken({ sub: payload.sub, role: payload.role });
-  const newRefreshToken = generateRefreshToken({ sub: payload.sub, role: payload.role });
-  const newRefreshTokenHash = hashToken(newRefreshToken);
+  const { accessToken: newAccessToken, refreshToken: newRefreshToken } = issueTokens(payload.sub, payload.role);
 
   await sessionRepository.updateSession(matchedSession.id, {
-    refreshTokenHash: newRefreshTokenHash,
+    refreshTokenHash: hashToken(newRefreshToken),
     expiresAt: refreshExpiryDate(),
     ipAddress: meta.ipAddress || matchedSession.ipAddress,
     userAgent: meta.userAgent || matchedSession.userAgent,
@@ -219,10 +217,7 @@ async function verifyEmail(rawToken) {
     throw new ApiError(400, INVALID_VERIFICATION_TOKEN_MESSAGE);
   }
 
-  if (record.expiresAt < new Date()) {
-    await verificationTokenRepository.deleteById(record.id);
-    throw new ApiError(400, INVALID_VERIFICATION_TOKEN_MESSAGE);
-  }
+  await assertNotExpired(record, verificationTokenRepository.deleteById, 400, INVALID_VERIFICATION_TOKEN_MESSAGE);
 
   await prisma.$transaction(async (tx) => {
     await userRepository.updateUser(record.userId, { isEmailVerified: true }, tx);
@@ -298,10 +293,7 @@ async function resetPassword(rawToken, newPassword) {
     throw new ApiError(400, INVALID_RESET_TOKEN_MESSAGE);
   }
 
-  if (record.expiresAt < new Date()) {
-    await passwordResetTokenRepository.deleteById(record.id);
-    throw new ApiError(400, INVALID_RESET_TOKEN_MESSAGE);
-  }
+  await assertNotExpired(record, passwordResetTokenRepository.deleteById, 400, INVALID_RESET_TOKEN_MESSAGE);
 
   const passwordHash = await hashPassword(newPassword);
 
@@ -310,24 +302,6 @@ async function resetPassword(rawToken, newPassword) {
     await sessionRepository.deleteAllByUserId(record.userId, tx);
     await passwordResetTokenRepository.deleteById(record.id, tx);
   });
-}
-
-function issueTokens(user) {
-  const accessToken = generateAccessToken({ sub: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ sub: user.id, role: user.role });
-  return { accessToken, refreshToken };
-}
-
-async function persistSession(userId, refreshToken, meta, client) {
-  await sessionRepository.createSession(
-    {
-      userId,
-      refreshTokenHash: hashToken(refreshToken),
-      expiresAt: refreshExpiryDate(),
-      ...buildSessionMeta(meta),
-    },
-    client
-  );
 }
 
 function sanitizeUsernameBase(input) {
@@ -364,7 +338,7 @@ async function loginWithGoogle(profile, meta = {}) {
   const existingUser = await userRepository.findByEmail(email);
 
   if (existingUser) {
-    const { accessToken, refreshToken } = issueTokens(existingUser);
+    const { accessToken, refreshToken } = issueTokens(existingUser.id, existingUser.role);
     await persistSession(existingUser.id, refreshToken, meta);
     return { user: sanitizeUser(existingUser), accessToken, refreshToken };
   }
@@ -385,7 +359,7 @@ async function loginWithGoogle(profile, meta = {}) {
         tx
       );
 
-      const tokens = issueTokens(createdUser);
+      const tokens = issueTokens(createdUser.id, createdUser.role);
       await persistSession(createdUser.id, tokens.refreshToken, meta, tx);
 
       return { user: createdUser, ...tokens };
@@ -407,7 +381,7 @@ async function loginWithGoogle(profile, meta = {}) {
       throw err;
     }
 
-    const { accessToken, refreshToken } = issueTokens(racedUser);
+    const { accessToken, refreshToken } = issueTokens(racedUser.id, racedUser.role);
     await persistSession(racedUser.id, refreshToken, meta);
     return { user: sanitizeUser(racedUser), accessToken, refreshToken };
   }

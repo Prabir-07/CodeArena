@@ -1,5 +1,7 @@
 const { z } = require('zod');
 
+const emailSchema = z.string().trim().toLowerCase().email('Invalid email address');
+
 const passwordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters')
@@ -16,14 +18,14 @@ const registerSchema = z.object({
     .min(3, 'Username must be at least 3 characters')
     .max(30, 'Username must be at most 30 characters')
     .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers, and underscores'),
-  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  email: emailSchema,
   password: passwordSchema,
   firstName: z.string().trim().min(1, 'First name is required').max(50),
   lastName: z.string().trim().min(1, 'Last name is required').max(50),
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  email: emailSchema,
   password: z.string().min(1, 'Password is required').max(72, 'Password must be at most 72 characters'),
 });
 
@@ -32,7 +34,7 @@ const verifyEmailSchema = z.object({
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  email: emailSchema,
 });
 
 const resetPasswordSchema = z.object({

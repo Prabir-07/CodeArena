@@ -48,10 +48,15 @@ function clearAuthCookies(res) {
   res.clearCookie(REFRESH_TOKEN_COOKIE, options);
 }
 
+function getRefreshTokenCookie(req) {
+  return req.cookies?.[REFRESH_TOKEN_COOKIE] || null;
+}
+
 module.exports = {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   setAuthCookies,
   clearAuthCookies,
+  getRefreshTokenCookie,
   durationToMs,
 };

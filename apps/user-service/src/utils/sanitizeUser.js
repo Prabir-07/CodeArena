@@ -1,3 +1,5 @@
+const pickFields = require('./pickFields');
+
 const PUBLIC_USER_FIELDS = [
   'id',
   'username',
@@ -18,15 +20,7 @@ const PUBLIC_USER_FIELDS = [
 ];
 
 function sanitizeUser(user) {
-  const safeUser = {};
-
-  for (const field of PUBLIC_USER_FIELDS) {
-    if (field in user) {
-      safeUser[field] = user[field];
-    }
-  }
-
-  return safeUser;
+  return pickFields(user, PUBLIC_USER_FIELDS);
 }
 
 module.exports = sanitizeUser;

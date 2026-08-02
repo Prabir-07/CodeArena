@@ -20,6 +20,10 @@ function updateSession(id, data, client = prisma) {
   return client.session.update({ where: { id }, data });
 }
 
+// Unscoped by design — callers (auth.service.js) only ever pass an id that came
+// back from a userId-scoped lookup (findByUserIdAndHash), so ownership is already
+// established. For any caller that receives the id from a client request instead
+// (e.g. a route param), use deleteByIdForUser below, not this one.
 function deleteById(id, client = prisma) {
   return client.session.delete({ where: { id } });
 }

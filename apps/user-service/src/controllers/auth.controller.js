@@ -1,5 +1,5 @@
 const authService = require('../services/auth.service');
-const { setAuthCookies, clearAuthCookies, REFRESH_TOKEN_COOKIE } = require('../auth/cookies');
+const { setAuthCookies, clearAuthCookies, getRefreshTokenCookie } = require('../auth/cookies');
 const config = require('../config/env');
 
 function requestMeta(req) {
@@ -51,7 +51,7 @@ async function login(req, res, next) {
 
 async function refresh(req, res, next) {
   try {
-    const incomingRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const incomingRefreshToken = getRefreshTokenCookie(req);
 
     const { accessToken, refreshToken } = await authService.refreshSession(
       incomingRefreshToken,
@@ -71,7 +71,7 @@ async function refresh(req, res, next) {
 
 async function logout(req, res, next) {
   try {
-    const incomingRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const incomingRefreshToken = getRefreshTokenCookie(req);
 
     await authService.logout(req.user.sub, incomingRefreshToken);
 

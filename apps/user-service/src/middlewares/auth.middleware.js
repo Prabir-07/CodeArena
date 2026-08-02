@@ -1,5 +1,6 @@
 const { verifyAccessToken } = require('../auth/jwt');
 const { ACCESS_TOKEN_COOKIE } = require('../auth/cookies');
+const ApiError = require('../utils/ApiError');
 
 function extractToken(req) {
   const authHeader = req.headers.authorization;
@@ -14,20 +15,14 @@ function authenticate(req, res, next) {
   const token = extractToken(req);
 
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized',
-    });
+    return next(new ApiError(401, 'Unauthorized'));
   }
 
   try {
     req.user = verifyAccessToken(token);
     return next();
   } catch (err) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized',
-    });
+    return next(new ApiError(401, 'Unauthorized'));
   }
 }
 

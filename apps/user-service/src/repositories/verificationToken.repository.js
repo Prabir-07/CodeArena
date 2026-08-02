@@ -8,6 +8,9 @@ function findByHash(tokenHash, client = prisma) {
   return client.verificationToken.findFirst({ where: { tokenHash } });
 }
 
+// Unscoped by design: the caller (auth.service.js) only reaches this after
+// findByHash matched the raw token, so possession of the token is itself the
+// authorization check — there is no separate userId to scope against here.
 function deleteById(id, client = prisma) {
   return client.verificationToken.delete({ where: { id } });
 }
