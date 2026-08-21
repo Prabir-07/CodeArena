@@ -1,9 +1,10 @@
-const USER_SERVICE_URL = import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:5000';
+export const USER_SERVICE_URL = import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:5000';
 
 export class ApiError extends Error {
   constructor(message, status) {
     super(message);
     this.status = status;
+    this.kind = status === 0 ? 'unavailable' : status === 401 ? 'unauthorized' : status === 400 ? 'validation' : 'server';
   }
 }
 

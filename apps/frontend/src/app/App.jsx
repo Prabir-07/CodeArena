@@ -6,12 +6,20 @@ import { AuthPage } from '../features/auth/AuthPage';
 import { HomePage } from '../features/home/HomePage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { UnavailablePage } from '../features/future/UnavailablePage';
+import { AccountActionPage } from '../features/account/AccountActionPage';
+import { PublicProfilePage } from '../features/account/PublicProfilePage';
+import { SessionsPage } from '../features/account/SessionsPage';
 
 const routes = [
   { path: '/', Page: HomePage },
   { path: '/login', Page: () => <AuthPage mode="login" /> },
   { path: '/register', Page: () => <AuthPage mode="register" /> },
   { path: '/profile', Page: ProfilePage },
+  { path: '/sessions', Page: SessionsPage },
+  { path: '/users/:username', Page: PublicProfilePage },
+  { path: '/forgot-password', Page: () => <AccountActionPage action="forgot" /> },
+  { path: '/reset-password', Page: () => <AccountActionPage action="reset" /> },
+  { path: '/verify-email', Page: () => <AccountActionPage action="verify" /> },
   { path: '/problems', Page: () => <UnavailablePage feature="problems" /> },
   { path: '/problems/:slug', Page: () => <UnavailablePage feature="problems" /> },
   { path: '/contests', Page: () => <UnavailablePage feature="contests" /> },
