@@ -63,3 +63,14 @@ main { flex: 1; }
 @media (max-width: 1080px) { .dashboard-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .dashboard-header { flex-direction: column; align-items: stretch; }.dashboard-header .button { width: 100%; }.stats-grid { grid-template-columns: 1fr; }.activity-list__item { flex-direction: column; gap: 4px; } }
+
+/* Contests (development preview — see lib/api/contestService.js). */
+.contests-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.contest-card { display: flex; flex-direction: column; }.contest-card__header { margin-bottom: 14px; }.contest-card h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: -.3px; }.contest-card h2 a:hover { color: #a7f36c; }.contest-card__description { margin: 0 0 18px; color: #a9b7d0; font-size: 13px; line-height: 1.6; flex: 1; }
+.contest-card__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 0 0 18px; padding-top: 16px; border-top: 1px solid #263452; font-size: 12px; }.contest-card__stats dt { margin: 0 0 3px; color: #91a0ba; }.contest-card__stats dd { margin: 0; color: #dce5f6; font-weight: 700; }
+.contest-card__link { color: #a7f36c; font-size: 13px; font-weight: 700; }
+.contest-problem-nav { padding-top: 18px; }.contest-problem-nav .tabs { overflow-x: auto; }
+.contest-problem-nav__meta { display: flex; align-items: center; gap: 10px; margin: -10px 0 18px; }
+.problem-statement__section .table-scroll { margin-top: 14px; }
+@media (max-width: 1080px) { .contests-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .contests-grid { grid-template-columns: 1fr; }.contest-card__stats { grid-template-columns: 1fr 1fr; } }

@@ -13,6 +13,9 @@ import { ProblemsPage } from '../features/problems/ProblemsPage';
 import { ProblemDetailsPage } from '../features/problems/ProblemDetailsPage';
 import { SolvePage } from '../features/problems/SolvePage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { ContestsPage } from '../features/contests/ContestsPage';
+import { ContestDetailsPage } from '../features/contests/ContestDetailsPage';
+import { ContestSolvePage } from '../features/contests/ContestSolvePage';
 
 const routes = [
   { path: '/', Page: HomePage },
@@ -28,8 +31,9 @@ const routes = [
   { path: '/problems', Page: ProblemsPage },
   { path: '/problems/:slug', Page: ProblemDetailsPage },
   { path: '/problems/:slug/solve', Page: SolvePage },
-  { path: '/contests', Page: () => <UnavailablePage feature="contests" /> },
-  { path: '/contests/:slug', Page: () => <UnavailablePage feature="contests" /> },
+  { path: '/contests', Page: ContestsPage },
+  { path: '/contests/:slug', Page: ContestDetailsPage },
+  { path: '/contests/:slug/solve', Page: ContestSolvePage },
   { path: '/leaderboard', Page: () => <UnavailablePage feature="leaderboard" /> },
   { fallback: true, Page: HomePage },
 ];
