@@ -29,8 +29,34 @@ const LIST_SELECT = {
   tags: { select: { tag: { select: { name: true } } } },
 };
 
+// Richer than the public LIST_SELECT (adds id/isPublished/timestamps, since
+// this is a management view, not the public catalog) but still leans on a
+// select rather than the full detail shape — an admin list doesn't need
+// description/constraints/functionSignature/examples per row.
+const ADMIN_LIST_SELECT = {
+  id: true,
+  slug: true,
+  title: true,
+  difficulty: true,
+  summary: true,
+  isPublished: true,
+  createdAt: true,
+  updatedAt: true,
+  tags: { select: { tag: { select: { name: true } } } },
+};
+
 function buildPublishedWhere({ search, difficulty, tag } = {}) {
   const where = { isPublished: true };
+  if (search) where.title = { contains: search, mode: 'insensitive' };
+  if (difficulty) where.difficulty = difficulty;
+  if (tag) where.tags = { some: { tag: { name: tag } } };
+  return where;
+}
+
+// Same filters as buildPublishedWhere, minus the isPublished constraint —
+// admin listing must see drafts too.
+function buildAdminWhere({ search, difficulty, tag } = {}) {
+  const where = {};
   if (search) where.title = { contains: search, mode: 'insensitive' };
   if (difficulty) where.difficulty = difficulty;
   if (tag) where.tags = { some: { tag: { name: tag } } };
@@ -61,10 +87,42 @@ function findPublishedBySlug(slug, client = prisma) {
   });
 }
 
-// Unscoped by publish status — for future admin/internal lookups that need
-// to see drafts too. Still never includes testCases (see DETAIL_SELECT).
+// Unscoped by publish status — for admin/internal lookups that need to see
+// drafts too. Still never includes testCases (see DETAIL_SELECT).
 function findById(id, client = prisma) {
   return client.problem.findUnique({ where: { id }, select: DETAIL_SELECT });
+}
+
+function findManyAdmin({ search, difficulty, tag, skip = 0, take = 8 } = {}, client = prisma) {
+  return client.problem.findMany({
+    where: buildAdminWhere({ search, difficulty, tag }),
+    select: ADMIN_LIST_SELECT,
+    orderBy: { createdAt: 'desc' },
+    skip,
+    take,
+  });
+}
+
+function countAdmin({ search, difficulty, tag } = {}, client = prisma) {
+  return client.problem.count({ where: buildAdminWhere({ search, difficulty, tag }) });
+}
+
+// `data` is a fully Prisma-shaped nested-write object built by the service
+// layer (scalar fields plus `examples: { create: [...] }` and
+// `tags: { create: [...] }`) — this repository does not know or care about
+// the business rules behind that shape, only how to pass it through.
+function create(data, client = prisma) {
+  return client.problem.create({ data, select: DETAIL_SELECT });
+}
+
+function update(id, data, client = prisma) {
+  return client.problem.update({ where: { id }, data, select: DETAIL_SELECT });
+}
+
+// Cascades to ProblemTag/Example/TestCase rows via the FK constraints
+// already established in the M2 migration — no manual cleanup needed here.
+function deleteById(id, client = prisma) {
+  return client.problem.delete({ where: { id } });
 }
 
 module.exports = {
@@ -72,4 +130,9 @@ module.exports = {
   countPublished,
   findPublishedBySlug,
   findById,
+  findManyAdmin,
+  countAdmin,
+  create,
+  update,
+  deleteById,
 };
