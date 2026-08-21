@@ -8,15 +8,20 @@ import react from '@vitejs/plugin-react';
 // production build output.
 const USER_SERVICE_PROXY_TARGET = 'http://localhost:5000';
 
-// /sessions and /users/:username are also client-side routes (see
-// src/app/router.jsx), so a real browser navigation to them (direct URL,
+// Dev-only: the Problem Service (apps/problem-service) runs on this port. Its
+// public endpoints need no cookies, but proxying same-origin keeps the browser
+// off a cross-origin request and matches how the User Service is wired.
+const PROBLEM_SERVICE_PROXY_TARGET = 'http://localhost:5001';
+
+// /sessions, /users/:username and /problems are also client-side routes (see
+// src/app/App.jsx), so a real browser navigation to them (direct URL,
 // refresh, bookmark) must fall through to the SPA rather than being proxied
-// to the User Service's same-named API routes — only the app's own fetch()
+// to the backend's same-named API routes — only the app's own fetch()
 // calls should be proxied. Browser navigations send `Accept: text/html`;
 // fetch() in src/lib/api/client.js does not, so that header reliably tells
 // the two apart. /auth has no such SPA route (e.g. the Google OAuth link at
 // /auth/google is a real full-page navigation that must always reach the
-// backend), so it's proxied unconditionally.
+// backend), and neither does /tags, so those are proxied unconditionally.
 function bypassPageNavigation(req) {
   if (req.headers.accept?.includes('text/html')) return req.url;
 }
@@ -31,6 +36,8 @@ export default defineConfig({
       '/auth': { target: USER_SERVICE_PROXY_TARGET, changeOrigin: true },
       '/users': { target: USER_SERVICE_PROXY_TARGET, changeOrigin: true, bypass: bypassPageNavigation },
       '/sessions': { target: USER_SERVICE_PROXY_TARGET, changeOrigin: true, bypass: bypassPageNavigation },
+      '/problems': { target: PROBLEM_SERVICE_PROXY_TARGET, changeOrigin: true, bypass: bypassPageNavigation },
+      '/tags': { target: PROBLEM_SERVICE_PROXY_TARGET, changeOrigin: true },
     },
   },
 });

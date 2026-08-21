@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { AppLink } from '../../app/router';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
 import { EmptyState, ErrorState, LoadingState } from '../../components/states/States';
 import { ProblemNotFoundError, problemService } from '../../lib/api/problemService';
 import { ProblemExamples } from './components/ProblemExamples';
@@ -12,13 +11,14 @@ const DIFFICULTY_TONE = { Easy: 'success', Medium: 'warning', Hard: 'danger' };
 
 export function ProblemDetailsPage({ params }) {
   const { slug } = params;
-  const [state, setState] = useState({ loading: true, problem: null, stats: null, error: null });
+  const [state, setState] = useState({ loading: true, problem: null, error: null });
 
   const load = () => {
-    setState({ loading: true, problem: null, stats: null, error: null });
-    Promise.all([problemService.getProblem(slug), problemService.getProblemStats(slug)])
-      .then(([problem, stats]) => setState({ loading: false, problem, stats, error: null }))
-      .catch((error) => setState({ loading: false, problem: null, stats: null, error }));
+    setState({ loading: true, problem: null, error: null });
+    problemService
+      .getProblem(slug)
+      .then((problem) => setState({ loading: false, problem, error: null }))
+      .catch((error) => setState({ loading: false, problem: null, error }));
   };
 
   useEffect(load, [slug]);
@@ -49,13 +49,13 @@ export function ProblemDetailsPage({ params }) {
     );
   }
 
-  const { problem, stats } = state;
+  const { problem } = state;
 
   return (
     <section className="problem-details-page section-wrap">
       <AppLink to="/problems" className="text-link problem-details-page__back">← Back to problems</AppLink>
       <header className="problem-details-page__header">
-        <p className="eyebrow">PROBLEM SERVICE · DEVELOPMENT PREVIEW</p>
+        <p className="eyebrow">PROBLEM SERVICE</p>
         <h1>{problem.title}</h1>
         <div className="problem-details-page__meta">
           <Badge tone={DIFFICULTY_TONE[problem.difficulty]}>{problem.difficulty}</Badge>
@@ -68,18 +68,15 @@ export function ProblemDetailsPage({ params }) {
           <ProblemStatement problem={problem} />
           <ProblemExamples examples={problem.examples} />
         </div>
+        {/*
+          The "Problem stats" card (acceptance rate, solved-by count, total
+          submissions) was removed here. Every figure in it was derived from
+          submissions, which the Problem Service does not own, and the previous
+          values came from a fixed mock table that cannot describe an
+          admin-authored problem. It returns when a Judge Service can supply
+          real numbers.
+        */}
         <aside className="problem-details-page__side">
-          <Card className="problem-stats-card">
-            <h2>Problem stats</h2>
-            <dl>
-              <dt>Acceptance</dt>
-              <dd>{stats.acceptanceRate.toFixed(1)}%</dd>
-              <dt>Solved by</dt>
-              <dd>{stats.solvedCount.toLocaleString()} users</dd>
-              <dt>Submissions</dt>
-              <dd>{stats.submissionCount.toLocaleString()}</dd>
-            </dl>
-          </Card>
           <Button href={`/problems/${problem.slug}/solve`} className="problem-details-page__cta">Start solving →</Button>
         </aside>
       </div>

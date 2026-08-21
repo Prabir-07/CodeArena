@@ -11,7 +11,7 @@ export function ProblemStatement({ problem, defaultOpen = true }) {
         <summary>Input &amp; output</summary>
         <p>
           Read input in the format shown in the examples below, and produce the result described for{' '}
-          <code>{problem.signature.name}</code>. Exact I/O framing (stdin/stdout vs. function return) will be defined by the
+          <code>{problem.functionSignature.name}</code>. Exact I/O framing (stdin/stdout vs. function return) will be defined by the
           Judge Service once it exists.
         </p>
       </details>

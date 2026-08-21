@@ -22,12 +22,17 @@ export function getLanguages() {
   return LANGUAGES;
 }
 
-// Starter code is generated from the problem's signature (owned by
-// problemService) formatted for the chosen language — kept here because the
-// formatting is an execution-environment concern, not a problem one.
+// Starter code is generated from the problem's functionSignature (owned by
+// the Problem Service) formatted for the chosen language — kept here because
+// the formatting is an execution-environment concern, not a problem one.
+//
+// The real signature is language-agnostic and structured:
+// { name, params: [{ name, type }], returnType }. Only the parameter names
+// are used for now — every seeded problem carries `type: null`, and turning
+// a canonical type into a per-language one is Judge Service work.
 export function getStarterCode(problem, languageId) {
-  const signature = problem?.signature || { name: 'solve', params: [] };
-  const params = signature.params.join(', ');
+  const signature = problem?.functionSignature || { name: 'solve', params: [] };
+  const params = (signature.params || []).map((param) => param.name).join(', ');
   switch (languageId) {
     case 'javascript':
       return `function ${signature.name}(${params}) {\n  // write your solution here\n}`;

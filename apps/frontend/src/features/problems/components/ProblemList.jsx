@@ -3,12 +3,16 @@ import { Badge } from '../../../components/ui/Badge';
 import { Table } from '../../../components/ui/Table';
 
 const DIFFICULTY_TONE = { Easy: 'success', Medium: 'warning', Hard: 'danger' };
-const STATUS_LABEL = { solved: 'Solved', attempted: 'Attempted', todo: 'Todo' };
-const STATUS_TONE = { solved: 'success', attempted: 'warning', todo: 'neutral' };
 
+// The Acceptance and Status columns were dropped when this list moved onto the
+// real Problem Service. Both are submission-derived — acceptance rate is an
+// aggregate over submissions, and status is per-user solved/attempted/todo —
+// so the Problem Service does not own either, and the catalogue is now
+// open-ended (an admin can author problems that no mock table describes).
+// There is no honest value to show until a Judge Service exists.
 export function ProblemList({ problems }) {
   return (
-    <Table columns={['Problem', 'Difficulty', 'Tags', 'Acceptance', 'Status']} caption="Practice problems">
+    <Table columns={['Problem', 'Difficulty', 'Tags']} caption="Practice problems">
       {problems.map((problem) => (
         <tr key={problem.slug}>
           <td>
@@ -17,8 +21,6 @@ export function ProblemList({ problems }) {
           </td>
           <td><Badge tone={DIFFICULTY_TONE[problem.difficulty]}>{problem.difficulty}</Badge></td>
           <td className="problem-list__tags">{problem.tags.map((tag) => <span className="tag-chip" key={tag}>{tag}</span>)}</td>
-          <td>{problem.acceptanceRate.toFixed(1)}%</td>
-          <td><Badge tone={STATUS_TONE[problem.status]}>{STATUS_LABEL[problem.status]}</Badge></td>
         </tr>
       ))}
     </Table>

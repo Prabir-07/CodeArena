@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { FormField } from '../../../components/ui/FormField';
-import { Tabs } from '../../../components/ui/Tabs';
 
 const DIFFICULTIES = ['all', 'Easy', 'Medium', 'Hard'];
-const STATUS_TABS = [
-  { value: 'all', label: 'All' },
-  { value: 'solved', label: 'Solved' },
-  { value: 'attempted', label: 'Attempted' },
-  { value: 'todo', label: 'Todo' },
-];
 
+// Search, difficulty and topic are exactly the filters the Problem Service's
+// list endpoint supports. The Status tabs (All/Solved/Attempted/Todo) were
+// removed here: status is per-user progress derived from submissions, which
+// the Problem Service does not own, and its query schema is strict — sending
+// a `status` parameter is a 400, not a silently ignored filter.
 export function ProblemFilters({ filters, tags, onChange }) {
   const [searchText, setSearchText] = useState(filters.search);
 
@@ -43,10 +41,6 @@ export function ProblemFilters({ filters, tags, onChange }) {
             ))}
           </select>
         </FormField>
-      </div>
-      <div className="problem-filters__status">
-        <span className="problem-filters__status-label">Status</span>
-        <Tabs tabs={STATUS_TABS} value={filters.status} onChange={(value) => onChange({ status: value })} />
       </div>
     </div>
   );

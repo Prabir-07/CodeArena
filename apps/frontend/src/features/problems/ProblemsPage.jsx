@@ -6,7 +6,9 @@ import { ProblemFilters } from './components/ProblemFilters';
 import { ProblemList } from './components/ProblemList';
 
 const PAGE_SIZE = 8;
-const INITIAL_FILTERS = { search: '', difficulty: 'all', tag: 'all', status: 'all', page: 1 };
+// No `status` here: it is per-user progress the Problem Service does not own,
+// and its list endpoint rejects unknown query parameters outright.
+const INITIAL_FILTERS = { search: '', difficulty: 'all', tag: 'all', page: 1 };
 
 export function ProblemsPage() {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
@@ -42,9 +44,9 @@ export function ProblemsPage() {
   return (
     <section className="problems-page section-wrap">
       <header className="problems-header">
-        <p className="eyebrow">PROBLEM SERVICE · DEVELOPMENT PREVIEW</p>
+        <p className="eyebrow">PROBLEM SERVICE</p>
         <h1>Practice problems</h1>
-        <p>This preview runs on local development data — real problems, stats, and progress arrive once the Problem Service is live.</p>
+        <p>Browse the full problem catalogue. Acceptance rates and your solved/attempted progress arrive once the Judge Service is live.</p>
       </header>
 
       <ProblemFilters filters={filters} tags={tags} onChange={updateFilters} />
