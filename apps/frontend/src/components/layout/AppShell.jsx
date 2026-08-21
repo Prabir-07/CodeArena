@@ -1,5 +1,6 @@
 import { Brand } from '../ui/Brand';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../features/auth/AuthContext';
 
 const navigation = [
   { label: 'Home', href: '/' },
@@ -9,6 +10,7 @@ const navigation = [
 ];
 
 export function AppShell({ children }) {
+  const { user, status } = useAuth();
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -21,10 +23,7 @@ export function AppShell({ children }) {
               <a key={item.href} href={item.href}>{item.label}</a>
             ))}
           </nav>
-          <div className="site-header__actions">
-            <a className="text-link" href="/login">Log in</a>
-            <Button href="/register" size="small">Join arena</Button>
-          </div>
+          <div className="site-header__actions">{status !== 'loading' && (user ? <Button href="/profile" size="small">@{user.username}</Button> : <><a className="text-link" href="/login">Log in</a><Button href="/register" size="small">Join arena</Button></>)}</div>
         </div>
       </header>
       <main>{children}</main>
