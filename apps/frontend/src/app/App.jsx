@@ -9,6 +9,9 @@ import { UnavailablePage } from '../features/future/UnavailablePage';
 import { AccountActionPage } from '../features/account/AccountActionPage';
 import { PublicProfilePage } from '../features/account/PublicProfilePage';
 import { SessionsPage } from '../features/account/SessionsPage';
+import { ProblemsPage } from '../features/problems/ProblemsPage';
+import { ProblemDetailsPage } from '../features/problems/ProblemDetailsPage';
+import { SolvePage } from '../features/problems/SolvePage';
 
 const routes = [
   { path: '/', Page: HomePage },
@@ -20,8 +23,9 @@ const routes = [
   { path: '/forgot-password', Page: () => <AccountActionPage action="forgot" /> },
   { path: '/reset-password', Page: () => <AccountActionPage action="reset" /> },
   { path: '/verify-email', Page: () => <AccountActionPage action="verify" /> },
-  { path: '/problems', Page: () => <UnavailablePage feature="problems" /> },
-  { path: '/problems/:slug', Page: () => <UnavailablePage feature="problems" /> },
+  { path: '/problems', Page: ProblemsPage },
+  { path: '/problems/:slug', Page: ProblemDetailsPage },
+  { path: '/problems/:slug/solve', Page: SolvePage },
   { path: '/contests', Page: () => <UnavailablePage feature="contests" /> },
   { path: '/contests/:slug', Page: () => <UnavailablePage feature="contests" /> },
   { path: '/leaderboard', Page: () => <UnavailablePage feature="leaderboard" /> },
