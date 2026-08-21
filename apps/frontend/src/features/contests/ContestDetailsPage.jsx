@@ -100,6 +100,7 @@ export function ContestDetailsPage({ params }) {
             </dl>
           </Card>
           {cta}
+          <Button href={`/contests/${contest.slug}/leaderboard`} variant="secondary" className="problem-details-page__cta">View standings</Button>
         </aside>
       </div>
     </section>

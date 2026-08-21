@@ -18,10 +18,15 @@ function matchPath(pattern, pathname) {
 
 export function resolveRoute(routes, pathname) {
   for (const route of routes) {
+    // The fallback entry carries no pattern — skip it here so matchPath is
+    // never handed an undefined pattern, and let it be picked up below.
+    if (!route.path) continue;
     const params = matchPath(route.path, pathname);
     if (params) return { ...route, params };
   }
-  return routes.find((route) => route.fallback) || null;
+  const fallback = routes.find((route) => route.fallback);
+  // Always hand back a params object so pages can destructure it safely.
+  return fallback ? { ...fallback, params: {} } : null;
 }
 
 export function RouterProvider({ children }) {

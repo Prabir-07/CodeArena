@@ -5,7 +5,6 @@ import { AuthProvider } from '../features/auth/AuthContext';
 import { AuthPage } from '../features/auth/AuthPage';
 import { HomePage } from '../features/home/HomePage';
 import { ProfilePage } from '../features/profile/ProfilePage';
-import { UnavailablePage } from '../features/future/UnavailablePage';
 import { AccountActionPage } from '../features/account/AccountActionPage';
 import { PublicProfilePage } from '../features/account/PublicProfilePage';
 import { SessionsPage } from '../features/account/SessionsPage';
@@ -16,6 +15,8 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { ContestsPage } from '../features/contests/ContestsPage';
 import { ContestDetailsPage } from '../features/contests/ContestDetailsPage';
 import { ContestSolvePage } from '../features/contests/ContestSolvePage';
+import { LeaderboardPage } from '../features/leaderboard/LeaderboardPage';
+import { ContestLeaderboardPage } from '../features/leaderboard/ContestLeaderboardPage';
 
 const routes = [
   { path: '/', Page: HomePage },
@@ -34,7 +35,8 @@ const routes = [
   { path: '/contests', Page: ContestsPage },
   { path: '/contests/:slug', Page: ContestDetailsPage },
   { path: '/contests/:slug/solve', Page: ContestSolvePage },
-  { path: '/leaderboard', Page: () => <UnavailablePage feature="leaderboard" /> },
+  { path: '/contests/:slug/leaderboard', Page: ContestLeaderboardPage },
+  { path: '/leaderboard', Page: LeaderboardPage },
   { fallback: true, Page: HomePage },
 ];
 
