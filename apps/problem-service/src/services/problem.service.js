@@ -1,5 +1,8 @@
 const problemRepository = require('../repositories/problem.repository');
+const tagRepository = require('../repositories/tag.repository');
 const ApiError = require('../utils/ApiError');
+const { sanitizePublicProblemSummary, sanitizePublicProblemDetail } = require('../utils/sanitizePublicProblem');
+const sanitizePublicTag = require('../utils/sanitizePublicTag');
 
 function toExamplesCreate(examples) {
   return examples.map((example, index) => ({
@@ -17,6 +20,40 @@ function toTagsCreate(tags) {
     tag: { connectOrCreate: { where: { name }, create: { name } } },
   }));
 }
+
+// --- public catalog ---------------------------------------------------------
+//
+// These three go through the repository's published-scoped reads, so an
+// unpublished problem is invisible here — it never appears in a listing, is
+// never counted, and is indistinguishable from a nonexistent slug.
+
+async function listPublished({ search, difficulty, tag, page, pageSize }) {
+  const skip = (page - 1) * pageSize;
+
+  const [problems, total] = await Promise.all([
+    problemRepository.findManyPublished({ search, difficulty, tag, skip, take: pageSize }),
+    problemRepository.countPublished({ search, difficulty, tag }),
+  ]);
+
+  return { items: problems.map(sanitizePublicProblemSummary), total, page, pageSize };
+}
+
+async function getPublishedBySlug(slug) {
+  const problem = await problemRepository.findPublishedBySlug(slug);
+
+  if (!problem) {
+    throw new ApiError(404, 'Problem not found');
+  }
+
+  return sanitizePublicProblemDetail(problem);
+}
+
+async function listPublicTags() {
+  const tags = await tagRepository.findAllWithPublishedCounts();
+  return tags.map(sanitizePublicTag);
+}
+
+// --- admin authoring --------------------------------------------------------
 
 async function createProblem(input) {
   const { examples, tags, isPublished, ...scalarFields } = input;
@@ -95,6 +132,9 @@ async function deleteProblem(id) {
 }
 
 module.exports = {
+  listPublished,
+  getPublishedBySlug,
+  listPublicTags,
   createProblem,
   listAdmin,
   getById,

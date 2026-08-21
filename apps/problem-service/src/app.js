@@ -6,6 +6,7 @@ const requestLogger = require('./middlewares/requestLogger.middleware');
 const notFound = require('./middlewares/notFound.middleware');
 const errorHandler = require('./middlewares/error.middleware');
 const healthRoutes = require('./routes/health.routes');
+const problemRoutes = require('./routes/problem.routes');
 const adminProblemRoutes = require('./routes/adminProblem.routes');
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(requestLogger);
 
 app.use('/', healthRoutes);
 app.use('/admin/problems', adminProblemRoutes);
+app.use('/', problemRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
