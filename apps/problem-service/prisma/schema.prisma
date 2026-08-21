@@ -1,0 +1,111 @@
+// Generates into a path local to this service rather than the default
+// (which npm workspaces hoists to the shared root node_modules). The User
+// Service's own @prisma/client resolves to that same hoisted location, and
+// with the default output both services' `prisma generate` runs would
+// overwrite each other's generated client there — whichever service
+// generated last would silently break the other's queries. A local output
+// keeps this service's generated client fully isolated.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Problem {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  title       String
+  difficulty  Difficulty
+  summary     String
+  description String
+  constraints String[]   @default([])
+
+  // Canonical, language-agnostic shape: { name, params: [{ name, type }], returnType }.
+  // Enforced by application-layer validation (Zod), not at the database level —
+  // it's always read/written whole alongside its problem, never queried into
+  // independently, so a normalized child table would add join cost for no benefit.
+  functionSignature Json
+
+  // Problems are created as drafts by default; only published problems are
+  // ever returned by the public catalog API.
+  isPublished Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tags      ProblemTag[]
+  examples  Example[]
+  testCases TestCase[]
+
+  @@map("problems")
+}
+
+model Tag {
+  id   String @id @default(uuid())
+  name String @unique
+
+  problems ProblemTag[]
+
+  @@map("tags")
+}
+
+model ProblemTag {
+  problemId String
+  tagId     String
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, tagId])
+  @@index([tagId])
+  @@map("problem_tags")
+}
+
+// Public sample input/output shown on the problem statement. Structurally
+// separate from TestCase below — never the same table, never the same rows,
+// even when their content happens to overlap.
+model Example {
+  id          String  @id @default(uuid())
+  problemId   String
+  input       String
+  output      String
+  explanation String?
+  order       Int
+
+  createdAt DateTime @default(now())
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@map("examples")
+}
+
+// Hidden test case used for judging. Never served by any public endpoint or
+// serializer — only reachable through the admin authoring API and the
+// internal, shared-secret-protected Judge-facing endpoint (both added in a
+// later milestone).
+model TestCase {
+  id             String @id @default(uuid())
+  problemId      String
+  input          String
+  expectedOutput String
+  order          Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@map("test_cases")
+}
