@@ -10,4 +10,8 @@ module.exports = {
     // calling back to it.
     accessSecret: process.env.JWT_ACCESS_SECRET,
   },
+  // Shared only with the Judge Service, for the /internal routes. Separate
+  // from the JWT secret on purpose: user tokens must not grant access to
+  // hidden test cases, and vice versa.
+  internalServiceSecret: process.env.INTERNAL_SERVICE_SECRET,
 };

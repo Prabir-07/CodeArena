@@ -8,6 +8,7 @@ const errorHandler = require('./middlewares/error.middleware');
 const healthRoutes = require('./routes/health.routes');
 const problemRoutes = require('./routes/problem.routes');
 const adminProblemRoutes = require('./routes/adminProblem.routes');
+const internalRoutes = require('./routes/internal.routes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(requestLogger);
 
 app.use('/', healthRoutes);
 app.use('/admin/problems', adminProblemRoutes);
+app.use('/internal', internalRoutes);
 app.use('/', problemRoutes);
 
 app.use(notFound);

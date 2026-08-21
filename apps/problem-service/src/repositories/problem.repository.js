@@ -93,6 +93,13 @@ function findById(id, client = prisma) {
   return client.problem.findUnique({ where: { id }, select: DETAIL_SELECT });
 }
 
+// Existence check only. Used where a caller needs to tell "no such problem"
+// (404) apart from "problem exists but has nothing attached" — fetching the
+// full DETAIL_SELECT with its examples and tags would be wasted work.
+function existsById(id, client = prisma) {
+  return client.problem.findUnique({ where: { id }, select: { id: true } });
+}
+
 function findManyAdmin({ search, difficulty, tag, skip = 0, take = 8 } = {}, client = prisma) {
   return client.problem.findMany({
     where: buildAdminWhere({ search, difficulty, tag }),
@@ -130,6 +137,7 @@ module.exports = {
   countPublished,
   findPublishedBySlug,
   findById,
+  existsById,
   findManyAdmin,
   countAdmin,
   create,
