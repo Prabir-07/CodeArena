@@ -9,11 +9,16 @@ export class ApiError extends Error {
 
 export async function request(path, options = {}) {
   const hasBody = options.body !== undefined;
-  const response = await fetch(`${USER_SERVICE_URL}${path}`, {
-    credentials: 'include',
-    headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
-    ...options,
-  });
+  let response;
+  try {
+    response = await fetch(`${USER_SERVICE_URL}${path}`, {
+      credentials: 'include',
+      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+      ...options,
+    });
+  } catch {
+    throw new ApiError('The account service is unavailable.', 0);
+  }
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.success === false) throw new ApiError(body?.message || 'Something went wrong. Please try again.', response.status);
   return body;

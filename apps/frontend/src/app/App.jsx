@@ -1,36 +1,33 @@
-import { useEffect, useState } from 'react';
 import { AppShell } from '../components/layout/AppShell';
+import { RouterProvider, resolveRoute, useRouter } from './router';
+import { ToastProvider } from '../components/ui/Toast';
 import { AuthProvider } from '../features/auth/AuthContext';
 import { AuthPage } from '../features/auth/AuthPage';
 import { HomePage } from '../features/home/HomePage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { UnavailablePage } from '../features/future/UnavailablePage';
 
-function usePathname() {
-  const [pathname, setPathname] = useState(window.location.pathname);
-  useEffect(() => {
-    const onPopState = () => setPathname(window.location.pathname);
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-  return pathname;
-}
+const routes = [
+  { path: '/', Page: HomePage },
+  { path: '/login', Page: () => <AuthPage mode="login" /> },
+  { path: '/register', Page: () => <AuthPage mode="register" /> },
+  { path: '/profile', Page: ProfilePage },
+  { path: '/problems', Page: () => <UnavailablePage feature="problems" /> },
+  { path: '/problems/:slug', Page: () => <UnavailablePage feature="problems" /> },
+  { path: '/contests', Page: () => <UnavailablePage feature="contests" /> },
+  { path: '/contests/:slug', Page: () => <UnavailablePage feature="contests" /> },
+  { path: '/leaderboard', Page: () => <UnavailablePage feature="leaderboard" /> },
+  { fallback: true, Page: HomePage },
+];
 
 function Route() {
-  const pathname = usePathname();
-  if (pathname === '/login') return <AuthPage mode="login" />;
-  if (pathname === '/register') return <AuthPage mode="register" />;
-  if (pathname === '/profile') return <ProfilePage />;
-  if (pathname === '/problems') return <UnavailablePage feature="problems" />;
-  if (pathname === '/contests') return <UnavailablePage feature="contests" />;
-  if (pathname === '/leaderboard') return <UnavailablePage feature="leaderboard" />;
-  return <HomePage />;
+  const { pathname } = useRouter();
+  const { Page, params } = resolveRoute(routes, pathname);
+  return <Page params={params} />;
 }
 
 export function App() {
   return (
-    <AuthProvider>
-      <AppShell><Route /></AppShell>
-    </AuthProvider>
+    <RouterProvider><ToastProvider><AuthProvider><AppShell><Route /></AppShell></AuthProvider></ToastProvider></RouterProvider>
   );
 }
