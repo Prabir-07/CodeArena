@@ -12,11 +12,13 @@ import { SessionsPage } from '../features/account/SessionsPage';
 import { ProblemsPage } from '../features/problems/ProblemsPage';
 import { ProblemDetailsPage } from '../features/problems/ProblemDetailsPage';
 import { SolvePage } from '../features/problems/SolvePage';
+import { DashboardPage } from '../features/dashboard/DashboardPage';
 
 const routes = [
   { path: '/', Page: HomePage },
   { path: '/login', Page: () => <AuthPage mode="login" /> },
   { path: '/register', Page: () => <AuthPage mode="register" /> },
+  { path: '/dashboard', Page: DashboardPage },
   { path: '/profile', Page: ProfilePage },
   { path: '/sessions', Page: SessionsPage },
   { path: '/users/:username', Page: PublicProfilePage },

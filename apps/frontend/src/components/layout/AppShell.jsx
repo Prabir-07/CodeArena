@@ -15,6 +15,10 @@ export function AppShell({ children }) {
   const { user, status } = useAuth();
   const { pathname, navigate } = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Dashboard only makes sense once signed in — added to the same nav list
+  // (rather than a separate menu) so it gets active-highlighting and mobile
+  // nav for free, matching every other entry here.
+  const navItems = status !== 'loading' && user ? [...navigation, { label: 'Dashboard', href: '/dashboard' }] : navigation;
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -23,7 +27,7 @@ export function AppShell({ children }) {
             <Brand />
           </AppLink>
           <nav className="primary-nav" aria-label="Main navigation">
-            {navigation.map((item) => (
+            {navItems.map((item) => (
               <AppLink key={item.href} to={item.href} className={pathname === item.href ? 'nav-link nav-link--active' : 'nav-link'}>{item.label}</AppLink>
             ))}
           </nav>
@@ -31,7 +35,7 @@ export function AppShell({ children }) {
           <button className="mobile-menu-button" type="button" aria-label="Open navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>☰</button>
         </div>
       </header>
-      {menuOpen && <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map((item) => <AppLink key={item.href} to={item.href} className={pathname === item.href ? 'nav-link nav-link--active' : 'nav-link'} onClick={() => setMenuOpen(false)}>{item.label}</AppLink>)}<hr />{user ? <button type="button" onClick={() => { setMenuOpen(false); navigate('/profile'); }}>View profile</button> : <><AppLink to="/login" onClick={() => setMenuOpen(false)}>Log in</AppLink><AppLink to="/register" onClick={() => setMenuOpen(false)}>Join arena</AppLink></>}</nav>}
+      {menuOpen && <nav className="mobile-nav" aria-label="Mobile navigation">{navItems.map((item) => <AppLink key={item.href} to={item.href} className={pathname === item.href ? 'nav-link nav-link--active' : 'nav-link'} onClick={() => setMenuOpen(false)}>{item.label}</AppLink>)}<hr />{user ? <button type="button" onClick={() => { setMenuOpen(false); navigate('/profile'); }}>View profile</button> : <><AppLink to="/login" onClick={() => setMenuOpen(false)}>Log in</AppLink><AppLink to="/register" onClick={() => setMenuOpen(false)}>Join arena</AppLink></>}</nav>}
       <main>{children}</main>
       <footer className="site-footer">
         <div className="site-footer__inner">

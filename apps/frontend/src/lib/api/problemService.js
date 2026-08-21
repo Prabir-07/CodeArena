@@ -284,9 +284,27 @@ export async function getProblemTags() {
   return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([tag, count]) => ({ tag, count }));
 }
 
+// Aggregates the same mock "my progress" status used by the Problems list
+// (see the comment on PROBLEMS above) by difficulty, so anything showing
+// solved/attempted counts — e.g. the Dashboard — always agrees with /problems.
+export async function getProgressSummary() {
+  await delay(120);
+  const byDifficulty = new Map();
+  for (const problem of PROBLEMS) {
+    const entry = byDifficulty.get(problem.difficulty) || { difficulty: problem.difficulty, solved: 0, attempted: 0, total: 0 };
+    entry.total += 1;
+    if (problem.status === 'solved') entry.solved += 1;
+    if (problem.status === 'attempted') entry.attempted += 1;
+    byDifficulty.set(problem.difficulty, entry);
+  }
+  const order = ['Easy', 'Medium', 'Hard'];
+  return order.filter((difficulty) => byDifficulty.has(difficulty)).map((difficulty) => byDifficulty.get(difficulty));
+}
+
 export const problemService = {
   listProblems,
   getProblem,
   getProblemStats,
   getProblemTags,
+  getProgressSummary,
 };

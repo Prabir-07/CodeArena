@@ -135,8 +135,11 @@ export async function submitCode({ slug, languageId, code, testCasesTotal = 3 })
   return submission;
 }
 
+// Omitting slug returns every submission (e.g. for a cross-problem view like
+// the Dashboard) — existing per-problem callers are unaffected.
 export async function getSubmissionHistory(slug) {
   await delay(150);
+  if (!slug) return [...SUBMISSIONS];
   return SUBMISSIONS.filter((submission) => submission.slug === slug);
 }
 
