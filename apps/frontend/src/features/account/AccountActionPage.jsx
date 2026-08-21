@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { ServiceUnavailableState } from '../../components/states/States';
+import { useToast } from '../../components/ui/Toast';
 import { userService } from '../../lib/api/userService';
 
 const content = {
@@ -11,7 +12,7 @@ const content = {
 };
 
 export function AccountActionPage({ action }) {
-  const page = content[action]; const [form, setForm] = useState({}); const [error, setError] = useState(null); const [success, setSuccess] = useState(''); const [pending, setPending] = useState(false);
-  const submit = async (event) => { event.preventDefault(); setPending(true); setError(null); try { const response = await page.submit(form); setSuccess(response.message); } catch (err) { setError(err); } finally { setPending(false); } };
-  return <section className="auth-page section-wrap"><div className="auth-card"><p className="eyebrow">{page.eyebrow}</p><h1>{page.title}</h1><p>{page.copy}</p>{success && <div className="form-notice">{success}</div>}{error && (error.kind === 'unavailable' ? <ServiceUnavailableState onRetry={() => setError(null)} /> : <div className="form-error" role="alert">{error.message}</div>)}<form className="auth-form" onSubmit={submit}>{page.fields.map((field) => <FormField key={field.name} label={field.label} hint={field.hint}><input required type={field.type || 'text'} value={form[field.name] || ''} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} /></FormField>)}<Button type="submit" disabled={pending}>{pending ? 'Please wait…' : 'Continue'}</Button></form></div></section>;
+  const page = content[action]; const { notify } = useToast(); const [form, setForm] = useState({}); const [error, setError] = useState(null); const [pending, setPending] = useState(false);
+  const submit = async (event) => { event.preventDefault(); setPending(true); setError(null); try { const response = await page.submit(form); notify(response.message); } catch (err) { setError(err); } finally { setPending(false); } };
+  return <section className="auth-page section-wrap"><div className="auth-card"><p className="eyebrow">{page.eyebrow}</p><h1>{page.title}</h1><p>{page.copy}</p>{error && (error.kind === 'unavailable' ? <ServiceUnavailableState onRetry={() => setError(null)} /> : <div className="form-error" role="alert">{error.message}</div>)}<form className="auth-form" onSubmit={submit}>{page.fields.map((field) => <FormField key={field.name} label={field.label} hint={field.hint}><input required type={field.type || 'text'} value={form[field.name] || ''} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} /></FormField>)}<Button type="submit" disabled={pending}>{pending ? 'Please wait…' : 'Continue'}</Button></form></div></section>;
 }

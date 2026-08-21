@@ -1,12 +1,34 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../../lib/api/client';
 import { userService } from '../../lib/api/userService';
+import { useToast } from '../../components/ui/Toast';
 
 const AuthContext = createContext(null);
+
+// The User Service's Google OAuth callback redirects here with ?auth=success
+// or ?auth=failure after setting (or failing to set) auth cookies. This just
+// surfaces that outcome and cleans up the URL — the normal getMe()/refresh()
+// bootstrap below is what actually picks up the resulting session.
+function useGoogleAuthRedirectNotice(notify) {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const auth = params.get('auth');
+    if (!auth) return;
+    if (auth === 'success') notify('Signed in with Google successfully.', 'success');
+    else if (auth === 'failure') notify('Google sign-in failed. Please try again.', 'error');
+    params.delete('auth');
+    const query = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    // Runs once on mount to consume the redirect's query param exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState('loading');
+  const { notify } = useToast();
+  useGoogleAuthRedirectNotice(notify);
 
   const loadUser = useCallback(async () => {
     try {
